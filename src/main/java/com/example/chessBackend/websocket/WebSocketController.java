@@ -7,7 +7,7 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 public class WebSocketController {
-    Processor gameProcessor = new Processor();
+//    Processor gameProcessor = new Processor();
 
     @MessageMapping("/incomingInfo")  // This is the endpoint where clients send their messages
     @SendTo("/topic/receivedInstruction")   // This is the topic to which the processed messages will be sent

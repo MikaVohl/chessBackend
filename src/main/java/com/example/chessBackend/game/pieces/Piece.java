@@ -39,4 +39,9 @@ public abstract class Piece implements PieceTemplate{
     public int getCol() {
         return this.col;
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
 }
