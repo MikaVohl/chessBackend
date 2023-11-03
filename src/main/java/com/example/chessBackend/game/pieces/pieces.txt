@@ -1,0 +1,25 @@
+
+
+Rook Motion     Bishop Motion      Knight Motion
+            Queen
+
+
+
+
+Queen (Piece)
+- Line Mover: range inf
+- Cross Mover: range inf
+
+Rook (Piece)
+- Line Mover: range inf
+
+Bishop (Piece)
+- Cross Mover: range inf
+
+King (Piece)
+- Line Mover: range 1
+- Cross Mover: range 1
+
+Knight (Piece)
+
+Pawn (Piece)
