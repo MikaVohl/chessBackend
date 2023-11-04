@@ -9,4 +9,6 @@ public class ReceiveMoves {
         messageCount++;
         return "Message #"+messageCount+". Tile at "+(char)(message.charAt(1) +17)+(8-message.charAt(0)+48)+". The piece at this tile is "+ Processor.fetchPiece(message.charAt(0)-48, message.charAt(1)-48);
     }
+
+
 }

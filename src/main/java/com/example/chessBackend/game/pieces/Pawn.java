@@ -1,5 +1,7 @@
 package com.example.chessBackend.game.pieces;
 
+import java.util.Arrays;
+
 public class Pawn extends Piece{
 
     public Pawn(boolean isWhite, int row, int col) {
@@ -11,13 +13,19 @@ public class Pawn extends Piece{
         int row = getRow();
         int col = getCol();
         boolean[][] possibleMoves = new boolean[8][8];
-        if(row > 0){
+        if(row > 0 && isWhite()){
             possibleMoves[row-1][col] = true;
             if(col > 0) possibleMoves[row-1][col-1] = true;
             if(col < 7) possibleMoves[row-1][col+1] = true;
         }
+        else if(row < 7 && !isWhite()){
+            possibleMoves[row+1][col] = true;
+            if(col > 0) possibleMoves[row+1][col-1] = true;
+            if(col < 7) possibleMoves[row+1][col+1] = true;
+        }
 
         possibleMoves[row][col] = false;
+
         return possibleMoves;
     }
 }
