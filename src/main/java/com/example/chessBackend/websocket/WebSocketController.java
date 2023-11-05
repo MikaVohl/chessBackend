@@ -18,7 +18,6 @@ public class WebSocketController {
 //        if(Processor.isFirstClick()){
             return sendSelections(row, col);
 //        }
-
     }
 
 //    //    @SendTo("/topic/receivedInstruction")   // This is the topic to which the processed messages will be sent

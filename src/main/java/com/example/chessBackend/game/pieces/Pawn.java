@@ -1,7 +1,5 @@
 package com.example.chessBackend.game.pieces;
 
-import java.util.Arrays;
-
 public class Pawn extends Piece{
 
     public Pawn(boolean isWhite, int row, int col) {

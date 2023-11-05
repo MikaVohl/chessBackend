@@ -19,6 +19,7 @@ public class Processor {
 
     public static String findSelections(int row, int col){
         Piece selectedPiece = boardObject.getPieceAt(row, col);
+        if(selectedPiece == null) return "";
         boolean[][] moves = selectedPiece.generateMoves();
 
         String output = "";
