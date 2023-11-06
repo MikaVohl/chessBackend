@@ -42,4 +42,34 @@ public class Board {
         if(row > 7 || row < 0 || col > 7 || col < 0) return null;
         return chessBoard[row][col];
     }
+
+    public void setPiece(int row, int col, Piece piece){
+        chessBoard[row][col] = piece;
+        if(piece != null) {
+            piece.setCol(col);
+            piece.setRow(row);
+        }
+    }
+
+    public void movePiece(int row1, int col1, int row2, int col2){
+        setPiece(row2, col2, getPieceAt(row1, col1));
+    }
+
+    public String decodeBoardIntoImg(){
+        StringBuilder output = new StringBuilder();
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                Piece currPiece = chessBoard[i][j];
+                if(currPiece == null) {
+                    output.append("  ");
+                    continue;
+                }
+                if(currPiece.isWhite()) output.append("w");
+                else output.append("b");
+                if(currPiece.toString().equals("Knight")) output.append("n");
+                else output.append((char) (currPiece.toString().charAt(0)+32));
+            }
+        }
+        return new String(output);
+    }
 }
