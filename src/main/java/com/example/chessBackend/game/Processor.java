@@ -3,22 +3,35 @@ package com.example.chessBackend.game;
 import com.example.chessBackend.game.pieces.Piece;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Processor {
 
-    private final static Board boardObject = new Board();
-    private static boolean whiteTurn = true;
-    private static boolean firstClick = true;
+//    private final static Board boardObject = new Board();
+//    private static boolean whiteTurn = true;
+//    private static boolean firstClick = true;
+    private static final Map<String, SessionVariables> sessionVariablesMap = new HashMap<>();
 
-    public static String fetchPiece(int row, int col){
-        if(boardObject.getPieceAt(row, col) == null) return "none";
-        return boardObject.getPieceAt(row, col).toString();
+    public static void addSessionId(String sessionId){
+        sessionVariablesMap.put(sessionId, new SessionVariables(sessionId));
     }
 
-    public static boolean isFirstClick() { return firstClick; }
+    public static SessionVariables getSessionVariables(String sessionId){
+        return sessionVariablesMap.get(sessionId);
+    }
 
-    public static String findSelections(int row, int col){
-        Piece selectedPiece = boardObject.getPieceAt(row, col);
+    public static String fetchPiece(String sessionId, int row, int col){
+        Board board = getSessionVariables(sessionId).getBoardObject();
+        if(board.getPieceAt(row, col) == null) return "none";
+        return board.getPieceAt(row, col).toString();
+    }
+
+    public static boolean isFirstClick(String sessionId) { return getSessionVariables(sessionId).getFirstClick(); }
+
+    public static String findSelections(String sessionId, int row, int col){
+        Board board = getSessionVariables(sessionId).getBoardObject();
+        Piece selectedPiece = board.getPieceAt(row, col);
         if(selectedPiece == null) return "";
         boolean[][] moves = selectedPiece.generateMoves();
 
