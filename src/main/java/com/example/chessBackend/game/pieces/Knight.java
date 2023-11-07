@@ -1,5 +1,7 @@
 package com.example.chessBackend.game.pieces;
 
+import com.example.chessBackend.game.Board;
+
 public class Knight extends Piece {
 
     public Knight(boolean isWhite, int row, int col){
@@ -7,7 +9,7 @@ public class Knight extends Piece {
     }
 
     @Override
-    public boolean[][] generateMoves(){
+    public boolean[][] generateMoves(Piece[][] currentBoard){
         int row = getRow();
         int col = getCol();
         boolean[][] possibleMoves = new boolean[8][8];

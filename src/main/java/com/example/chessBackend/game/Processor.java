@@ -31,9 +31,15 @@ public class Processor {
 
     public static String firstClick(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
+        boolean[][] selectionBoard = findSelections(sessionId, row, col);
+        sessionVars.setLastSelections(selectionBoard);
+
+        String selectionsString = encodeSelections(sessionId, selectionBoard);
+
         sessionVars.setFirstClick(false);
         sessionVars.setFirstClickCoords(row, col);
-        return "1"+findSelections(sessionId, row, col);
+
+        return "1"+selectionsString;
     }
 
     public static String secondClick(String sessionId, int row, int col){
@@ -50,6 +56,7 @@ public class Processor {
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
         }
         else{ // unsuccessful second click
+            sessionVars.setFirstClick(true);
             return firstClick(sessionId, row, col);
         }
         sessionVars.setFirstClick(true);
@@ -69,14 +76,20 @@ public class Processor {
         return output;
     }
 
-    public static String findSelections(String sessionId, int row, int col){
+    public static boolean[][] findSelections(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         Board board = sessionVars.getBoardObject();
         Piece selectedPiece = board.getPieceAt(row, col);
-        if(selectedPiece == null || selectedPiece.isWhite() != sessionVars.isWhiteTurn()) return "";
-        boolean[][] moves = selectedPiece.generateMoves();
-        sessionVars.setLastSelections(moves);
+        if(selectedPiece == null || selectedPiece.isWhite() != sessionVars.isWhiteTurn()) return new boolean[8][8];
 
+        boolean[][] pieceMoves = selectedPiece.generateMoves(board.getBoardArray());
+
+
+        return pieceMoves;
+//        return board.removeFalseMoves(pieceMoves, sessionVars.isWhiteTurn());
+    }
+
+    public static String encodeSelections(String sessionId, boolean[][] moves){
         StringBuilder output = new StringBuilder();
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){

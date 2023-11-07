@@ -26,7 +26,6 @@ public class SessionVariables {
     }
 
     public void setFirstClick(boolean isFirst){
-        System.out.println("Setting first click to "+isFirst);
         firstClick = isFirst;
     }
     public void setLastBoard(String board) { lastBoard = board; }
@@ -51,7 +50,6 @@ public class SessionVariables {
         return whiteTurn;
     }
     public void setWhiteTurn(boolean isWhite){
-        System.out.println("Setting white turn to "+isWhite);
         whiteTurn = isWhite;
     }
 }

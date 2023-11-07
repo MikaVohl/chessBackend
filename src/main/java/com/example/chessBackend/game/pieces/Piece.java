@@ -44,4 +44,8 @@ public abstract class Piece implements PieceTemplate{
     public String toString() {
         return getClass().getSimpleName();
     }
+    @Override
+    public boolean checkTrue(int row, int col, Piece[][] currentBoard){
+        return currentBoard[row][col] == null || (currentBoard[row][col] != null && currentBoard[row][col].isWhite() != isWhite());
+    }
 }

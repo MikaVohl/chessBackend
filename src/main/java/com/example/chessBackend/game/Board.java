@@ -35,7 +35,11 @@ public class Board {
     }
 
     public Piece[][] getBoardArray() {
-        return chessBoard;
+        Piece[][] finalBoard = new Piece[8][8];
+        for(int i=0; i<8; i++){
+            System.arraycopy(chessBoard[i], 0, finalBoard[i], 0, 8);
+        }
+        return finalBoard;
     }
 
     public Piece getPieceAt(int row, int col){
@@ -54,6 +58,19 @@ public class Board {
     public void movePiece(int row1, int col1, int row2, int col2){
         setPiece(row2, col2, getPieceAt(row1, col1));
     }
+
+//    public boolean[][] removeFalseMoves(boolean[][] preCheck, boolean isWhiteTurn){
+//        boolean[][] output = cloneArray(preCheck);
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(!preCheck[i][j]) continue;
+//                if(chessBoard[i][j] != null && chessBoard[i][j].isWhite() == isWhiteTurn){ // if piece on selected square is of the same color as user
+//                    output[i][j] = false;
+//                }
+//            }
+//        }
+//        return output;
+//    }
 
     public String decodeBoardIntoImg(){
         StringBuilder output = new StringBuilder();
