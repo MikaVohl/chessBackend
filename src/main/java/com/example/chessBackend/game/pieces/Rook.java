@@ -31,7 +31,7 @@ public class Rook extends Piece {
             }
             possibleMoves[i][col] = true;
         }
-        for(int i = row+1; i<=7; i++){ // scan right
+        for(int i = col+1; i<=7; i++){ // scan right
             if(currentBoard[row][i] != null){ // if a piece detected in the path
                 if(currentBoard[row][i].isWhite() != isWhite()){ // if pieces are different colour
                     possibleMoves[row][i] = true;

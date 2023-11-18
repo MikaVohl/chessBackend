@@ -3,15 +3,12 @@ package com.example.chessBackend.game;
 import com.example.chessBackend.game.pieces.Piece;
 import jakarta.websocket.Session;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class Processor {
 
-//    private final static Board boardObject = new Board();
-//    private static boolean whiteTurn = true;
-//    private static boolean firstClick = true;
     private static final Map<String, SessionVariables> sessionVariablesMap = new HashMap<>();
 
     public static void addSessionId(String sessionId){
@@ -53,9 +50,13 @@ public class Processor {
             sessionVars.getBoardObject().movePiece(firstR, firstC, row, col);
             sessionVars.getBoardObject().setPiece(firstR, firstC, null);
 
-            output+= ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
+            output = ("3"+sessionVars.getBoardObject().decodeBoardIntoImg());
 
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
+
+            if(isCheckMate(sessionId, sessionVars.isWhiteTurn())){
+                return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
+            }
         }
         else{ // unsuccessful second click
             sessionVars.setFirstClick(true);
@@ -63,6 +64,12 @@ public class Processor {
         }
         sessionVars.setFirstClick(true);
         sessionVars.setLastBoard(output);
+
+        if(sessionVars.isCpuGame()) {
+            makeComputerMove(sessionVars.isWhiteTurn(), sessionId);
+            sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
+            output = ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
+        }
         return output;
     }
 
@@ -78,6 +85,29 @@ public class Processor {
         return output;
     }
 
+    public static boolean isCheckMate(String sessionId, boolean isCheckingWhite){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
+        Board board = sessionVars.getBoardObject();
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                if(pieceHasMoves(sessionId, i, j)) return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean pieceHasMoves(String sessionId, int row, int col){
+        boolean[][] possibleMoves = findSelections(sessionId, row, col);
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                if(possibleMoves[i][j]){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static boolean[][] findSelections(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         Board board = sessionVars.getBoardObject();
@@ -88,13 +118,11 @@ public class Processor {
         revealedChecks(sessionVars.isWhiteTurn(), pieceMoves, board.getBoardArray(), row, col);
         return pieceMoves;
     }
-    public static boolean[][] findSelections(Piece[][] pieceBoard, boolean isWhite, int row, int col){
+    public static boolean[][] findSelectionsNoChecks(Piece[][] pieceBoard, boolean isWhite, int row, int col){
         Piece selectedPiece = pieceBoard[row][col];
         if(selectedPiece == null || selectedPiece.isWhite() != isWhite) return new boolean[8][8];
 
         boolean[][] pieceMoves = selectedPiece.generateMoves(pieceBoard);
-
-//        revealedChecks(isWhite, pieceMoves, pieceBoard, row, col);
 
         return pieceMoves;
     }
@@ -146,7 +174,7 @@ public class Processor {
         int[] kingCoords = kingLocation(whiteKing, pieceBoard);
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
-                if(findSelections(pieceBoard, !whiteKing, i, j)[kingCoords[0]][kingCoords[1]]){
+                if(findSelectionsNoChecks(pieceBoard, !whiteKing, i, j)[kingCoords[0]][kingCoords[1]]){
                     return true;
                 }
             }
@@ -186,4 +214,69 @@ public class Processor {
         }
         return output.toString();
     }
+
+    public static String generateCode(){
+        Random rand = new Random();
+        StringBuilder output = new StringBuilder();
+        for(int i=0; i<4; i++){
+            output.append((char) (rand.nextInt(97, 123)));
+        }
+        return output.toString();
+    }
+
+//    public static void randomMove(boolean isWhite, String sessionId){
+//        SessionVariables sessionVars = getSessionVariables(sessionId);
+//        boolean[][] possibleMoves = possibleComputerMoves(isWhite, sessionId);
+//        Random rand = new Random();
+//        while(true){
+//            int index = rand.nextInt(0, 64);
+//            if(possibleMoves[index/8][index%8]){
+//                sessionVars.getBoardObject().movePiece(firstR, firstC, index/8, index%8);
+//                sessionVars.getBoardObject().setPiece(firstR, firstC, null);
+//                break;
+//            }
+//        }
+//    }
+    public static void makeComputerMove(boolean isWhite, String sessionId){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
+        Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
+        Random rand = new Random();
+        int index = rand.nextInt(0, 8);
+        for(int i=0; i < 8; i++){
+            int row = i < 8-index ? (i+index)%8 : i - (8-index);
+            for(int j=0; j<8; j++){
+                int col = j;
+                System.out.println("Row "+row+"  Col "+col);
+                if(pieceBoard[row][col] != null && pieceBoard[row][col].isWhite() == isWhite){
+                    boolean[][] tempMoves = findSelections(sessionId, row, col);
+                    printBoard(tempMoves);
+                    int indexPiece = rand.nextInt(0, 8);
+                    for(int x=0; x < 8; x++){
+                        int currRow = x < 8-indexPiece ? (x+indexPiece)%8 : x - (8-indexPiece);
+                        for(int y=0; y<8; y++){
+                            int currCol = y;
+                            if(tempMoves[currRow][currCol]){
+                                System.out.println("HEREEEE");
+                                sessionVars.getBoardObject().movePiece(row, col, currRow, currCol);
+                                sessionVars.getBoardObject().setPiece(row, col, null);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+//    public static boolean[][] unionSelections(boolean[][] board1, boolean[][] board2){
+//        boolean[][] outputBoard = new boolean[8][8];
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(board1[i][j] || board2[i][j]){
+//                    outputBoard[i][j] = true;
+//                }
+//            }
+//        }
+//        return outputBoard;
+//    }
 }
