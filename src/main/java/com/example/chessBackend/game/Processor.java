@@ -50,7 +50,7 @@ public class Processor {
             sessionVars.getBoardObject().movePiece(firstR, firstC, row, col);
             sessionVars.getBoardObject().setPiece(firstR, firstC, null);
 
-            output = ("3"+sessionVars.getBoardObject().decodeBoardIntoImg());
+            output = ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
 
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
 
