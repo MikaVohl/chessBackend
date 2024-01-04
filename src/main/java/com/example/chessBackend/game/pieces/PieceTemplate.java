@@ -1,7 +1,5 @@
 package com.example.chessBackend.game.pieces;
 
-import com.example.chessBackend.game.Board;
-
 public interface PieceTemplate {
 
     boolean isWhite();
@@ -17,4 +15,5 @@ public interface PieceTemplate {
 
     int getCol();
 
+    int getValue();
 }

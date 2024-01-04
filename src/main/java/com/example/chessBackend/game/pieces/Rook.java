@@ -6,6 +6,7 @@ public class Rook extends Piece {
 
     public Rook(boolean isWhite, int row, int col){
         super(isWhite, row, col);
+        this.value = 4;
     }
 
     @Override

@@ -6,6 +6,7 @@ public class Bishop extends Piece{
 
     public Bishop(boolean isWhite, int row, int col){
         super(isWhite, row, col);
+        this.value = 3;
     }
 
     @Override

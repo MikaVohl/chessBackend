@@ -1,32 +1,33 @@
 package com.example.chessBackend.game;
 
 import com.example.chessBackend.game.pieces.Piece;
-import jakarta.websocket.Session;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+
 
 public class Processor {
 
-    private static final Map<String, SessionVariables> sessionVariablesMap = new HashMap<>();
+    private final Map<String, SessionVariables> sessionVariablesMap = new HashMap<>();
 
-    public static void addSessionId(String sessionId){
+    public void addSessionId(String sessionId){
         sessionVariablesMap.put(sessionId, new SessionVariables(sessionId));
     }
 
-    public static SessionVariables getSessionVariables(String sessionId){
-        if(!sessionVariablesMap.containsKey(sessionId)) addSessionId(sessionId);
+    public SessionVariables getSessionVariables(String sessionId){
+        if(!sessionVariablesMap.containsKey(sessionId)){
+            System.out.println("Session ID not found, adding new session ID: "+sessionId);
+            addSessionId(sessionId);
+        }
         return sessionVariablesMap.get(sessionId);
     }
 
-    public static String fetchPiece(String sessionId, int row, int col) {
+    public String fetchPiece(String sessionId, int row, int col) {
         Board board = getSessionVariables(sessionId).getBoardObject();
         if (board.getPieceAt(row, col) == null) return "none";
         return board.getPieceAt(row, col).toString();
     }
 
-    public static String firstClick(String sessionId, int row, int col){
+    public String firstClick(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
 
         boolean[][] selectionBoard = findSelections(sessionId, row, col);
@@ -41,7 +42,7 @@ public class Processor {
         return "1"+selectionsString;
     }
 
-    public static String secondClick(String sessionId, int row, int col){
+    public String secondClick(String sessionId, int row, int col){
         String output = "";
         SessionVariables sessionVars = getSessionVariables(sessionId);
         if(sessionVars.getLastSelections()[row][col]) { // successful second click
@@ -55,7 +56,10 @@ public class Processor {
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
 
             if(isCheckMate(sessionId, sessionVars.isWhiteTurn())){
-                return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
+                if(!kingInCheck(sessionId, sessionVars.isWhiteTurn())){ // checkmate case
+                    return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
+                }
+                return "4"+sessionVars.getBoardObject().decodeBoardIntoImg(); // stalemate case
             }
         }
         else{ // unsuccessful second click
@@ -65,29 +69,25 @@ public class Processor {
         sessionVars.setFirstClick(true);
         sessionVars.setLastBoard(output);
 
-        if(sessionVars.isCpuGame()) {
-            makeComputerMove(sessionVars.isWhiteTurn(), sessionId);
-            sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
-            output = ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
-        }
+        // makeComputerMove(sessionVars.isWhiteTurn(), sessionId);
+        // sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
+        output = ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
         return output;
     }
 
-    public static String processClick(String sessionId, int row, int col){
-        SessionVariables sessionVars = Processor.getSessionVariables(sessionId);
+    public String processClick(String sessionId, int row, int col){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
         String output = "";
 
         if(sessionVars.getFirstClick())
-            output += Processor.firstClick(sessionId, row, col);
+            output += firstClick(sessionId, row, col);
         else
-            output+= Processor.secondClick(sessionId, row, col);
+            output+= secondClick(sessionId, row, col);
 
         return output;
     }
 
-    public static boolean isCheckMate(String sessionId, boolean isCheckingWhite){
-        SessionVariables sessionVars = getSessionVariables(sessionId);
-        Board board = sessionVars.getBoardObject();
+    public boolean isCheckMate(String sessionId, boolean isCheckingWhite){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(pieceHasMoves(sessionId, i, j)) return false;
@@ -96,7 +96,14 @@ public class Processor {
         return true;
     }
 
-    public static boolean pieceHasMoves(String sessionId, int row, int col){
+    public boolean kingInCheck(String sessionId, boolean isCheckingWhite){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
+        Board board = sessionVars.getBoardObject();
+        int[] kingCoords = kingLocation(isCheckingWhite, board.getBoardArray());
+        return findSelectionsNoChecks(board.getBoardArray(), !isCheckingWhite, kingCoords[0], kingCoords[1])[kingCoords[0]][kingCoords[1]];
+    }
+
+    public boolean pieceHasMoves(String sessionId, int row, int col){
         boolean[][] possibleMoves = findSelections(sessionId, row, col);
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
@@ -108,17 +115,24 @@ public class Processor {
         return false;
     }
 
-    public static boolean[][] findSelections(String sessionId, int row, int col){
+    public boolean[][] findSelections(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         Board board = sessionVars.getBoardObject();
-        Piece selectedPiece = board.getPieceAt(row, col);
-        if(selectedPiece == null || selectedPiece.isWhite() != sessionVars.isWhiteTurn()) return new boolean[8][8];
+        if(board.getPieceAt(row, col) == null || board.getPieceAt(row, col).isWhite() != sessionVars.isWhiteTurn()) return new boolean[8][8];
+        return findSelectionsFromBoard(row, col, board.getBoardArray());
+    }
 
-        boolean[][] pieceMoves = selectedPiece.generateMoves(board.getBoardArray());
-        revealedChecks(sessionVars.isWhiteTurn(), pieceMoves, board.getBoardArray(), row, col);
+    public boolean[][] findSelectionsFromBoard(int row, int col, Piece[][] pieceBoard){
+//        Board boardObj = sessionVars.getBoardObject();
+//        Piece selectedPiece = boardObj.getPieceAt(row, col);
+        Piece selectedPiece = pieceBoard[row][col];
+        boolean[][] pieceMoves = selectedPiece.generateMoves(pieceBoard);
+        revealedChecks(selectedPiece.isWhite(), pieceMoves, pieceBoard, row, col);
         return pieceMoves;
     }
-    public static boolean[][] findSelectionsNoChecks(Piece[][] pieceBoard, boolean isWhite, int row, int col){
+
+    // Does not sift out moves that would put the king in check
+    public boolean[][] findSelectionsNoChecks(Piece[][] pieceBoard, boolean isWhite, int row, int col){
         Piece selectedPiece = pieceBoard[row][col];
         if(selectedPiece == null || selectedPiece.isWhite() != isWhite) return new boolean[8][8];
 
@@ -126,7 +140,7 @@ public class Processor {
 
         return pieceMoves;
     }
-    public static void printBoard(Piece[][] board){
+    public void printBoard(Piece[][] board){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(board[i][j] == null) System.out.print("__");
@@ -138,7 +152,7 @@ public class Processor {
         System.out.println();
     }
 
-    public static void printBoard(boolean[][] board){
+    public void printBoard(boolean[][] board){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(board[i][j]) System.out.print("O");
@@ -150,7 +164,7 @@ public class Processor {
         System.out.println();
     }
 
-    public static void revealedChecks(boolean whiteKing, boolean[][] currentSelections, Piece[][] boardCopy, int startRow, int startCol){
+    public void revealedChecks(boolean whiteKing, boolean[][] currentSelections, Piece[][] boardCopy, int startRow, int startCol){
 //        System.out.println("End");
 //        printBoard(currentSelections);
         for(int i=0; i<8; i++){
@@ -170,7 +184,7 @@ public class Processor {
 //        printBoard(currentSelections);
 
     }
-    public static boolean isInCheck(boolean whiteKing, Piece[][] pieceBoard){
+    public boolean isInCheck(boolean whiteKing, Piece[][] pieceBoard){
         int[] kingCoords = kingLocation(whiteKing, pieceBoard);
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
@@ -181,7 +195,7 @@ public class Processor {
         }
         return false;
     }
-    public static int[] kingLocation(boolean whiteKing, Piece[][] pieceBoard){
+    public int[] kingLocation(boolean whiteKing, Piece[][] pieceBoard){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(pieceBoard[i][j] != null && pieceBoard[i][j].toString().equals("King") && pieceBoard[i][j].isWhite() == whiteKing) return new int[]{i,j};
@@ -189,7 +203,7 @@ public class Processor {
         }
         return new int[2];
     }
-    public static Piece[][] copyPieceBoard(Piece[][] referenceBoard){
+    public Piece[][] copyPieceBoard(Piece[][] referenceBoard){
         Piece[][] outputBoard = new Piece[8][8];
         for(int i=0; i<8; i++){
             System.arraycopy(referenceBoard[i], 0, outputBoard[i], 0, 8);
@@ -197,15 +211,15 @@ public class Processor {
         return outputBoard;
     }
 
-    public static void setPieceCopy(int row, int col, Piece piece, Piece[][] chessBoardCopy){
+    public void setPieceCopy(int row, int col, Piece piece, Piece[][] chessBoardCopy){
         chessBoardCopy[row][col] = piece;
     }
 
-    public static void movePieceCopy(int row1, int col1, int row2, int col2, Piece[][] chessBoardCopy){
+    public void movePieceCopy(int row1, int col1, int row2, int col2, Piece[][] chessBoardCopy){
         setPieceCopy(row2, col2, chessBoardCopy[row1][col1], chessBoardCopy);
     }
 
-    public static String encodeSelections(boolean[][] moves){
+    public String encodeSelections(boolean[][] moves){
         StringBuilder output = new StringBuilder();
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
@@ -215,7 +229,7 @@ public class Processor {
         return output.toString();
     }
 
-    public static String generateCode(){
+    public String generateCode(){
         Random rand = new Random();
         StringBuilder output = new StringBuilder();
         for(int i=0; i<4; i++){
@@ -224,48 +238,175 @@ public class Processor {
         return output.toString();
     }
 
-//    public static void randomMove(boolean isWhite, String sessionId){
-//        SessionVariables sessionVars = getSessionVariables(sessionId);
-//        boolean[][] possibleMoves = possibleComputerMoves(isWhite, sessionId);
-//        Random rand = new Random();
-//        while(true){
-//            int index = rand.nextInt(0, 64);
-//            if(possibleMoves[index/8][index%8]){
-//                sessionVars.getBoardObject().movePiece(firstR, firstC, index/8, index%8);
-//                sessionVars.getBoardObject().setPiece(firstR, firstC, null);
-//                break;
-//            }
-//        }
-//    }
-    public static void makeComputerMove(boolean isWhite, String sessionId){
+    // public static void randomMove(boolean isWhite, String sessionId){
+    //     SessionVariables sessionVars = getSessionVariables(sessionId);
+    //     Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
+    //     Random rand = new Random();
+    //     ArrayList<int[]> validMoves = new ArrayList<>();
+
+    //     // Collect all valid moves
+    //     for (int i = 0; i < 8; i++) {
+    //         for (int j = 0; j < 8; j++) {
+    //             if (pieceBoard[i][j] != null && pieceBoard[i][j].isWhite() == isWhite) {
+    //                 boolean[][] tempMoves = findSelections(sessionId, i, j);
+    //                 for (int x = 0; x < 8; x++) {
+    //                     for (int y = 0; y < 8; y++) {
+    //                         if (tempMoves[x][y]) {
+    //                             validMoves.add(new int[]{i, j, x, y});
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     // Choose a random move from the list of valid moves
+    //     if (!validMoves.isEmpty()) {
+    //         int[] move = validMoves.get(rand.nextInt(validMoves.size()));
+    //         sessionVars.getBoardObject().movePiece(move[0], move[1], move[2], move[3]);
+    //         sessionVars.getBoardObject().setPiece(move[0], move[1], null);
+    //     }
+    // }
+
+    public void makeComputerMove(boolean isWhite, String sessionId){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
-        Random rand = new Random();
-        int index = rand.nextInt(0, 8);
-        for(int i=0; i < 8; i++){
-            int row = i < 8-index ? (i+index)%8 : i - (8-index);
-            for(int j=0; j<8; j++){
-                int col = j;
-                System.out.println("Row "+row+"  Col "+col);
-                if(pieceBoard[row][col] != null && pieceBoard[row][col].isWhite() == isWhite){
-                    boolean[][] tempMoves = findSelections(sessionId, row, col);
-                    printBoard(tempMoves);
-                    int indexPiece = rand.nextInt(0, 8);
-                    for(int x=0; x < 8; x++){
-                        int currRow = x < 8-indexPiece ? (x+indexPiece)%8 : x - (8-indexPiece);
-                        for(int y=0; y<8; y++){
-                            int currCol = y;
-                            if(tempMoves[currRow][currCol]){
-                                System.out.println("HEREEEE");
-                                sessionVars.getBoardObject().movePiece(row, col, currRow, currCol);
-                                sessionVars.getBoardObject().setPiece(row, col, null);
-                                return;
+        ArrayList<int[]> validMoves = new ArrayList<>();
+        int bestScore = Integer.MIN_VALUE;
+        int[] bestMove = null;
+
+        // Collect all valid moves and evaluate them
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (pieceBoard[i][j] == null || pieceBoard[i][j].isWhite() != isWhite) continue;
+                boolean[][] tempMoves = findSelections(sessionId, i, j);
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+                        if (tempMoves[x][y]) {
+                            int[] move = new int[]{i, j, x, y};
+                            validMoves.add(move);
+
+                            // Evaluate the move
+                            int score = evaluateMove(pieceBoard, move, 2);
+                            // System.out.println(Arrays.toString(move) + ": " + score);
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMove = move;
                             }
                         }
                     }
                 }
             }
         }
+        // Make the best move
+        if (bestMove != null) {
+            sessionVars.getBoardObject().movePiece(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
+            sessionVars.getBoardObject().setPiece(bestMove[0], bestMove[1], null);
+        }
+    }
+
+    public int evaluateMove(Piece[][] evaluationBoard, int[] move, int foresight) {
+//        SessionVariables sessionVars = getSessionVariables(sessionId);
+//        Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
+        Piece[][] pieceBoard = evaluationBoard;
+        int score = 0;
+    
+        // If the move captures an opponent's piece, add the value of the piece to the score
+        Piece capturedPiece = pieceBoard[move[2]][move[3]];
+        if (capturedPiece != null) {
+            score += 20 * capturedPiece.getValue();
+        }
+        // encourage moving pawns
+        score += 1 * (pieceBoard[move[0]][move[1]].toString().equals("Pawn") ? 1 : 0);
+        // discourage moving the king
+        score -= 1 * (pieceBoard[move[0]][move[1]].toString().equals("King") ? 1 : 0);
+
+        score -= addSquareScore(move[0], move[1]); // discourage moving away from favourable positions
+        score += addSquareScore(move[2], move[3]); // encourage moving towards favourable positions
+    
+        // make a copy of board
+        Piece[][] tempBoard = copyPieceBoard(pieceBoard);
+        // make the move on the copy
+        tempBoard[move[0]][move[1]] = null;
+        tempBoard[move[2]][move[3]] = pieceBoard[move[0]][move[1]];
+        // find opposing king color
+        boolean kingColor = !tempBoard[move[2]][move[3]].isWhite();
+        // check if opposing king is in check
+        if(isInCheck(kingColor, tempBoard)){
+            score += 40;
+        }
+//        if(isCheckMate(sessionId, kingColor)){
+//            if(isInCheck(kingColor, pieceBoard)){
+//                score += Integer.MAX_VALUE;
+//            }
+//            else{
+//                score -= 50;
+//            }
+//        }
+
+        // add foresight into the next move, avoiding ones where you will lose score
+        if(foresight > 0){
+//            System.out.println("Moving from "+move[0]+","+move[1]+" to "+move[2]+","+move[3]);
+            score -= foresightScore(tempBoard, foresight, !tempBoard[move[2]][move[3]].isWhite());
+        }
+
+        return score;
+    }
+
+    public int foresightScore(Piece[][] pieceBoard, int foresight, boolean turn){
+        int score = Integer.MIN_VALUE;
+        int[] bestMove = null;
+        // Simulate making the computer move
+//        Piece capturedPiece = pieceBoard[move[2]][move[3]];
+//        Piece movedPiece = pieceBoard[move[0]][move[1]];
+//        pieceBoard[move[0]][move[1]] = null;
+//        pieceBoard[move[2]][move[3]] = movedPiece;
+
+        // Find the highest score possible for the opponent's next move
+        for(int i=0; i<8; i++){ // loop through opponent pieces they could choose
+            for(int j=0; j<8; j++){
+                if(pieceBoard[i][j] != null && (pieceBoard[i][j].isWhite() == turn)){
+                    boolean[][] tempMoves = findSelectionsFromBoard(i, j, pieceBoard);
+//                    System.out.println("White moves "+i+","+j);
+//                    System.out.println(Arrays.deepToString(tempMoves).replace("], ", "]\n").replace("[[", "[").replace("]]", "]"));
+                    for(int x=0; x<8; x++){ // loop through the moves of the piece at i,j
+                        for(int y=0; y<8; y++){
+                            if(tempMoves[x][y]){ // if a valid move
+                                int[] nextMove = new int[]{i, j, x, y};
+                                int nextScore = evaluateMove(pieceBoard, nextMove, foresight-1);
+                                if(nextScore > score){
+                                    score = nextScore;
+                                    bestMove = nextMove;
+                                }
+                            }
+                        }
+                    }
+//                    System.out.println("White score is "+score);
+                }
+//                System.out.println("EVALUATE MOVE RESULT: "+evaluateMove(pieceBoard, new int[]{7,5,2,0}, 0));
+            }
+        }
+
+//        // Undo the move
+//        pieceBoard[move[0]][move[1]] = movedPiece;
+//        pieceBoard[move[2]][move[3]] = capturedPiece;
+
+        // System.out.println("Best move is "+(bestMove == null ? "null" : (Arrays.toString(bestMove) + ": " + score)));
+//        System.out.println("best move is "+bestMove[0]+","+bestMove[1]+" to "+bestMove[2]+","+bestMove[3]);
+        return score;
+    }
+
+    public int addSquareScore(int row, int col){
+        int[][] squareScores = new int[][]{
+                {0, 1, 2, 3, 3, 2, 1, 0},
+                {1, 2, 3, 4, 4, 3, 2, 1},
+                {2, 3, 4, 5, 5, 4, 3, 2},
+                {3, 4, 5, 6, 6, 5, 4, 3},
+                {3, 4, 5, 6, 6, 5, 4, 3},
+                {2, 3, 4, 5, 5, 4, 3, 2},
+                {1, 2, 3, 4, 4, 3, 2, 1},
+                {0, 1, 2, 3, 3, 2, 1, 0}
+        };
+        return squareScores[row][col];
     }
 
 //    public static boolean[][] unionSelections(boolean[][] board1, boolean[][] board2){
@@ -279,4 +420,6 @@ public class Processor {
 //        }
 //        return outputBoard;
 //    }
+
 }
+

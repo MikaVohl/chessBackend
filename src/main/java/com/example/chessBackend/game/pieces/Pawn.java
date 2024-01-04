@@ -1,11 +1,10 @@
 package com.example.chessBackend.game.pieces;
 
-import com.example.chessBackend.game.Board;
-
 public class Pawn extends Piece{
 
     public Pawn(boolean isWhite, int row, int col) {
         super(isWhite, row, col);
+        this.value = 1;
     }
 
     @Override

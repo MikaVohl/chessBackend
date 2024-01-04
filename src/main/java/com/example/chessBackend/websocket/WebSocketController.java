@@ -2,11 +2,11 @@ package com.example.chessBackend.websocket;
 
 import com.example.chessBackend.game.Processor;
 import com.example.chessBackend.game.SessionVariables;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
@@ -16,46 +16,38 @@ import org.springframework.util.LinkedMultiValueMap;
 
 @Controller
 public class WebSocketController {
-//    SimpMessagingTemplate simpMessagingTemplate = new SimpMessagingTemplate(new MessageChannel() {
-//        @Override
-//        public boolean send(Message<?> message, long timeout) {
-//            return false;
-//        }
-//    });
 
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public WebSocketController(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    Processor processor = new Processor();
 
     @SubscribeMapping("/serverCommands")
     public String onSubscribe(SimpMessageHeaderAccessor headerAccessor) {
-//        notifySecondConnection();
-//        simpMessagingTemplate.convertAndSend("/topic/test", "testing");
-        String joinCode = Processor.generateCode();
+        // String joinCode = processor.generateCode(); // this joincode is no longer necessary, must remove once messaging system is better
         String sessionId = headerAccessor.getSessionId();
-        return joinCode+sessionId+Processor.getSessionVariables(sessionId).getBoardObject().decodeBoardIntoImg();
+        return sessionId+processor.getSessionVariables(sessionId).getBoardObject().decodeBoardIntoImg();
     }
 
 
-//    @MessageMapping("/fleet/{fleetId}/driver/{driverId}")
-//    public void simple(@DestinationVariable String fleetId, @DestinationVariable String driverId) {
-//        simpMessagingTemplate.convertAndSend("/topic/fleet/" + fleetId, new Simple(fleetId, driverId));
-//    }
+    // NEW - /connection endpoint not necessary
+    // @MessageMapping("/connection")  // This is the endpoint where clients send their messages
+    // public void connectionNegotation(Message<String> clientMessage) {
+        // MessageHeaders msgHeaders = clientMessage.getHeaders();
+        // LinkedMultiValueMap<?,?> headers = (LinkedMultiValueMap<?,?>) msgHeaders.get("nativeHeaders");
+        // String clientId = null;
+        // if(headers != null)
+        //     clientId = (String) headers.get("id").get(0);
+        // String message = clientMessage.getPayload(); // NEW - Not necessary, don't need to send this message from frontend
+    // }
 
-    @MessageMapping("/connection")  // This is the endpoint where clients send their messages
-    public void connectionNegotation(Message<String> clientMessage) {
-        MessageHeaders msgHeaders = clientMessage.getHeaders();
-        LinkedMultiValueMap<?,?> headers = (LinkedMultiValueMap<?,?>) msgHeaders.get("nativeHeaders");
-        String clientId = null;
-        if(headers != null)
-            clientId = (String) headers.get("id").get(0);
-        String message = clientMessage.getPayload();
+        // @SendToUser("/topic/serverCommands")   // This is the topic to which the processed messages will be sent
 
-        if(message.equals("cpu")){
-            System.out.println("CPU GAME");
-            Processor.getSessionVariables(clientId).setCpuGame(true);
-        }
-    }
-
-    @MessageMapping("/incomingInfo")  // This is the endpoint where clients send their messages
-    @SendToUser("/topic/serverCommands")   // This is the topic to which the processed messages will be sent
+    @MessageMapping("/incomingInfo") // This is the endpoint where clients send their messages
+    @SendToUser("/topic/serverCommands")
     public String handleMessage(Message<String> clientMessage) {
         MessageHeaders msgHeaders = clientMessage.getHeaders();
         LinkedMultiValueMap<?,?> headers = (LinkedMultiValueMap<?,?>) msgHeaders.get("nativeHeaders");
@@ -63,11 +55,24 @@ public class WebSocketController {
         if(headers != null)
             clientId = (String) headers.get("id").get(0);
         String message = clientMessage.getPayload();
+        if(message.equals("1")){
+            SessionVariables sessionVars = processor.getSessionVariables(clientId);
+            processor.makeComputerMove(sessionVars.isWhiteTurn(), clientId);
+            sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
+            return "5"+sessionVars.getBoardObject().decodeBoardIntoImg();
+        }
 
         int row = message.charAt(0)-48;
         int col = message.charAt(1)-48;
 
-        return Processor.processClick(clientId, row, col);
+        // System.out.println("id..."+clientId+"...");
+        // try{
+        //     messagingTemplate.convertAndSendToUser(clientId, "/topic/serverCommands", processor.processClick(clientId, row, col));
+        // }catch(Exception e){
+        //     System.out.println("Error: "+e);
+        // }
+
+        return processor.processClick(clientId, row, col);
     }
 
 }

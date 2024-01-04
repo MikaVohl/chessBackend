@@ -9,7 +9,6 @@ public class SessionVariables {
     private boolean[][] lastSelections = null;
     private String lastBoard = null;
     private int[] firstClickCoords = null;
-    private boolean cpuGame = false;
 
     public SessionVariables(String id){
         this.id = id;
@@ -20,6 +19,10 @@ public class SessionVariables {
 
     public Board getBoardObject() {
         return boardObject;
+    }
+
+    public void setBoardObject(Board boardObject) {
+        this.boardObject = boardObject;
     }
 
     public boolean getFirstClick(){
@@ -53,6 +56,4 @@ public class SessionVariables {
     public void setWhiteTurn(boolean isWhite){
         whiteTurn = isWhite;
     }
-    public void setCpuGame(boolean isCpuGame) { cpuGame = isCpuGame; }
-    public boolean isCpuGame() { return cpuGame; }
 }

@@ -6,6 +6,7 @@ public class King extends Piece {
 
     public King(boolean isWhite, int row, int col){
         super(isWhite, row, col);
+        this.value = 999;
     }
 
     @Override

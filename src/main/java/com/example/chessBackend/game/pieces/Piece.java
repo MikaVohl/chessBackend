@@ -4,6 +4,7 @@ public abstract class Piece implements PieceTemplate{
     private boolean isWhite = true;
     private int row = 0;
     private int col = 0;
+    protected int value = 1;
 
     public Piece(boolean isWhite, int row, int col){
         setWhite(isWhite);
@@ -43,6 +44,10 @@ public abstract class Piece implements PieceTemplate{
     @Override
     public String toString() {
         return getClass().getSimpleName();
+    }
+    @Override
+    public int getValue(){
+        return this.value;
     }
     @Override
     public boolean checkTrue(int row, int col, Piece[][] currentBoard){
