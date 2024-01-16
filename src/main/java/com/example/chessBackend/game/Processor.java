@@ -1,6 +1,6 @@
 package com.example.chessBackend.game;
 
-import com.example.chessBackend.game.pieces.Piece;
+import com.example.chessBackend.game.pieces.*;
 
 import java.util.*;
 
@@ -28,6 +28,67 @@ public class Processor {
     }
 
     public String firstClick(String sessionId, int row, int col){
+//        Piece[][] testBoard = new Piece[8][8];
+//        testBoard[0][0] = new Rook(false, 0, 0);
+//        testBoard[0][7] = new Rook(false, 0, 7);
+//        testBoard[2][2] = new Knight(false, 2, 2);
+//        testBoard[6][3] = new Knight(false, 6, 3);
+//        testBoard[7][0] = new Rook(true, 7, 0);
+//        testBoard[7][7] = new Rook(true, 7, 7);
+//        testBoard[7][1] = new Knight(true, 7, 1);
+//        testBoard[7][6] = new Knight(true, 7, 6);
+//        testBoard[0][4] = new King(false, 0, 4);
+//        testBoard[4][2] = new King(true, 4, 2);
+//        testBoard[1][0] = new Pawn(false, 1, 0);
+//        testBoard[1][1] = new Pawn(false, 1, 1);
+//        testBoard[1][2] = new Pawn(false, 1, 2);
+//        testBoard[1][3] = new Pawn(false, 1, 3);
+//        testBoard[1][4] = new Pawn(false, 1, 4);
+//        testBoard[1][5] = new Pawn(false, 1, 5);
+//        testBoard[1][6] = new Pawn(false, 1, 6);
+//        testBoard[1][7] = new Pawn(false, 1, 7);
+//        testBoard[6][0] = new Pawn(true, 6, 0);
+//        testBoard[6][1] = new Pawn(true, 6, 1);
+//        testBoard[6][2] = new Pawn(true, 6, 2);
+//        testBoard[6][5] = new Pawn(true, 6, 5);
+//        testBoard[6][6] = new Pawn(true, 6, 6);
+//        testBoard[6][7] = new Pawn(true, 6, 7);
+//        testBoard[0][2] = new Bishop(false, 0, 2);
+//        testBoard[0][3] = new Queen(false, 0, 3);
+//        testBoard[0][5] = new Bishop(false, 0, 5);
+//        testBoard[7][2] = new Bishop(true, 7, 2);
+//        testBoard[7][3] = new Queen(true, 7, 3);
+//        testBoard[7][5] = new Bishop(true, 7, 5);
+
+//        System.out.println();
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(testBoard[i][j] != null){
+//                    System.out.print(testBoard[i][j].toString().charAt(0));
+//                }
+//                else{
+//                    System.out.print("_");
+//                }
+//            }
+//            System.out.println();
+//        }
+//        System.out.println("white king in check on test board "+isInCheck(true, testBoard));
+//        System.out.println("black king in check on test board "+isInCheck(false, testBoard));
+//        System.out.println("White king location is "+kingLocation(true, testBoard)[0]+","+kingLocation(true, testBoard)[1]);
+//        System.out.println("Black king location is "+kingLocation(false, testBoard)[0]+","+kingLocation(false, testBoard)[1]);
+        // make the board as follows:
+        /*
+        R_BQKB_R
+        PPPPPPPP
+        __K_____
+        ________
+        __K_____
+        ________
+        PPPK_PPP
+        RKBQ_BKR
+         */
+
+
         SessionVariables sessionVars = getSessionVariables(sessionId);
 
         boolean[][] selectionBoard = findSelections(sessionId, row, col);
@@ -48,15 +109,21 @@ public class Processor {
         if(sessionVars.getLastSelections()[row][col]) { // successful second click
             int firstR = sessionVars.getFirstClickCoords()[0];
             int firstC = sessionVars.getFirstClickCoords()[1];
+            Piece removedPiece = sessionVars.getBoardObject().getPieceAt(row, col);
+            if(removedPiece != null) {
+                sessionVars.removePiece(removedPiece.toString(), removedPiece.isWhite());
+            }
             sessionVars.getBoardObject().movePiece(firstR, firstC, row, col);
             sessionVars.getBoardObject().setPiece(firstR, firstC, null);
+            sessionVars.addMovesMade();
+//            System.out.println("Position valued at: "+evaluatePosition(sessionVars.getBoardObject().getBoardArray()));
 
             output = ("2"+sessionVars.getBoardObject().decodeBoardIntoImg());
 
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
 
-            if(isCheckMate(sessionId, sessionVars.isWhiteTurn())){
-                if(!kingInCheck(sessionId, sessionVars.isWhiteTurn())){ // checkmate case
+            if(isCheckMate(sessionVars.getBoardObject().getBoardArray())){
+                if(!isInCheck(sessionVars.isWhiteTurn(), sessionVars.getBoardObject().getBoardArray())){ // checkmate case
                     return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
                 }
                 return "4"+sessionVars.getBoardObject().decodeBoardIntoImg(); // stalemate case
@@ -87,24 +154,40 @@ public class Processor {
         return output;
     }
 
-    public boolean isCheckMate(String sessionId, boolean isCheckingWhite){
+    public boolean isCheckMate(Piece[][] pieceBoard){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
-                if(pieceHasMoves(sessionId, i, j)) return false;
+                if(pieceHasMoves(pieceBoard, i, j)) return false;
             }
         }
         return true;
     }
 
-    public boolean kingInCheck(String sessionId, boolean isCheckingWhite){
-        SessionVariables sessionVars = getSessionVariables(sessionId);
-        Board board = sessionVars.getBoardObject();
-        int[] kingCoords = kingLocation(isCheckingWhite, board.getBoardArray());
-        return findSelectionsNoChecks(board.getBoardArray(), !isCheckingWhite, kingCoords[0], kingCoords[1])[kingCoords[0]][kingCoords[1]];
+    public boolean kingInCheck(Piece[][] boardArray, boolean isCheckingWhite){
+        int[] kingCoords = kingLocation(isCheckingWhite, boardArray);
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                if(boardArray[i][j] != null && boardArray[i][j].isWhite() != isCheckingWhite){ // if enemy of king being checked
+                    boolean[][] tempMoves = boardArray[i][j].generateMoves(boardArray);
+                    if(tempMoves[kingCoords[0]][kingCoords[1]]) return true;
+                }
+            }
+        }
+//        int[] kingCoords = kingLocation(whiteKing, pieceBoard);
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(findSelectionsNoChecks(boardArray, !isCheckingWhite, i, j)[kingCoords[0]][kingCoords[1]]){
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//        boolean result = findSelectionsNoChecks(boardArray, !isCheckingWhite, kingCoords[0], kingCoords[1])[kingCoords[0]][kingCoords[1]];
+        return false;
     }
 
-    public boolean pieceHasMoves(String sessionId, int row, int col){
-        boolean[][] possibleMoves = findSelections(sessionId, row, col);
+    public boolean pieceHasMoves(Piece[][] pieceBoard, int row, int col){
+        boolean[][] possibleMoves = findSelectionsFromBoard(row, col, pieceBoard);
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(possibleMoves[i][j]){
@@ -126,6 +209,7 @@ public class Processor {
 //        Board boardObj = sessionVars.getBoardObject();
 //        Piece selectedPiece = boardObj.getPieceAt(row, col);
         Piece selectedPiece = pieceBoard[row][col];
+        if(selectedPiece == null) return new boolean[8][8];
         boolean[][] pieceMoves = selectedPiece.generateMoves(pieceBoard);
         revealedChecks(selectedPiece.isWhite(), pieceMoves, pieceBoard, row, col);
         return pieceMoves;
@@ -133,12 +217,10 @@ public class Processor {
 
     // Does not sift out moves that would put the king in check
     public boolean[][] findSelectionsNoChecks(Piece[][] pieceBoard, boolean isWhite, int row, int col){
-        Piece selectedPiece = pieceBoard[row][col];
+        final Piece selectedPiece = pieceBoard[row][col];
         if(selectedPiece == null || selectedPiece.isWhite() != isWhite) return new boolean[8][8];
 
-        boolean[][] pieceMoves = selectedPiece.generateMoves(pieceBoard);
-
-        return pieceMoves;
+        return selectedPiece.generateMoves(pieceBoard);
     }
     public void printBoard(Piece[][] board){
         for(int i=0; i<8; i++){
@@ -164,7 +246,7 @@ public class Processor {
         System.out.println();
     }
 
-    public void revealedChecks(boolean whiteKing, boolean[][] currentSelections, Piece[][] boardCopy, int startRow, int startCol){
+    public void revealedChecks(boolean whiteKing, boolean[][] currentSelections, Piece[][] boardCopy, int startRow, int startCol){ // removes moves that reveal checks
 //        System.out.println("End");
 //        printBoard(currentSelections);
         for(int i=0; i<8; i++){
@@ -186,6 +268,7 @@ public class Processor {
     }
     public boolean isInCheck(boolean whiteKing, Piece[][] pieceBoard){
         int[] kingCoords = kingLocation(whiteKing, pieceBoard);
+//        System.out.println("king coords: "+kingCoords[0]+","+kingCoords[1]);
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
                 if(findSelectionsNoChecks(pieceBoard, !whiteKing, i, j)[kingCoords[0]][kingCoords[1]]){
@@ -206,13 +289,21 @@ public class Processor {
     public Piece[][] copyPieceBoard(Piece[][] referenceBoard){
         Piece[][] outputBoard = new Piece[8][8];
         for(int i=0; i<8; i++){
-            System.arraycopy(referenceBoard[i], 0, outputBoard[i], 0, 8);
+            for(int j=0; j<8; j++){
+                if(referenceBoard[i][j] != null)
+                    outputBoard[i][j] = referenceBoard[i][j].copy();
+            }
+//            System.arraycopy(referenceBoard[i], 0, outputBoard[i], 0, 8);
         }
         return outputBoard;
     }
 
     public void setPieceCopy(int row, int col, Piece piece, Piece[][] chessBoardCopy){
         chessBoardCopy[row][col] = piece;
+        if(piece != null) {
+            piece.setCol(col);
+            piece.setRow(row);
+        }
     }
 
     public void movePieceCopy(int row1, int col1, int row2, int col2, Piece[][] chessBoardCopy){
@@ -266,9 +357,192 @@ public class Processor {
     //         sessionVars.getBoardObject().setPiece(move[0], move[1], null);
     //     }
     // }
+    public int evaluatePosition(Piece[][] pieceBoard, int movesMade, boolean turn){
+        if(!checkValidityBoard(pieceBoard)) System.out.println("BOARD NOT VALID!!!");
+        int score = 0;
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                final Piece currPiece = pieceBoard[i][j];
+                if(currPiece == null) continue;
+                int values = (15 * currPiece.getValue());
+                values += Math.max(0, (int) (addSquareScore(i, j) - (0.5 * ((float) Math.sqrt(movesMade)))));
+//                System.out.println("added "+Math.max(0, (int) (addSquareScore(i, j) - (0.5 * ((float) Math.sqrt(movesMade))))));
+//                if(i == 2 && j == 0){
+//                    values += 10000;
+//                }
+//                System.out.println("added "+ (int) (5.0 * addSquareScore(i, j) / ((float) movesMade)));
+                if(currPiece.isWhite()){
+                    score += values;
+                }
+                else {
+                    score -= values;
+                }
+            }
+        }
+//        if(turn){
+//            System.out.println("evaluating a move by white");
+//        System.out.println();
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(pieceBoard[i][j] != null){
+//                    System.out.print(pieceBoard[i][j].toString().charAt(0));
+//                }
+//                else{
+//                    System.out.print("_");
+//                }
+//            }
+//            System.out.println();
+//        }
+//        System.out.println("white king in check on test board "+isInCheck(true, pieceBoard));
+//        System.out.println("black king in check on test board "+isInCheck(false, pieceBoard));
+        boolean checkMate = isCheckMate(pieceBoard);
+        if(turn) {
+            if (isInCheck(false, pieceBoard)) {
+//            System.out.println("black king in check");
+                if(checkMate){
+                    System.out.println("Sees checkmate white");
+                    return Integer.MAX_VALUE;
+                }
+                score += 14;
+            }
+            else{
+                if(checkMate) score -= 10; // stalemate
+            }
+        }
+        else{
+            if(isInCheck(true, pieceBoard)){
+//            System.out.println("white king in check");
+                if(checkMate){
+                    System.out.println("Sees checkmate black");
+                    return Integer.MIN_VALUE;
+                }
+                score -= 14;
+            }
+            else{
+                if(checkMate) score += 10; // stalemate
+            }
+        }
+//        }
+//        else{
+////            System.out.println("evaluating a move by black");
+//            if(kingInCheck(pieceBoard, true)){
+//                System.out.println("white king in check");
+//                score -= 10000;
+//            }
+//            if(kingInCheck(pieceBoard, false)){
+//                System.out.println("black king in check");
+//                score += 10000;
+//            }
+//        }
+        return score;
+    }
+
+    public boolean checkValidityBoard(Piece[][] board){
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                if(board[i][j] != null){
+                    if(board[i][j].getRow() != i || board[i][j].getCol() != j){
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
     public void makeComputerMove(boolean isWhite, String sessionId){
         SessionVariables sessionVars = getSessionVariables(sessionId);
+        int foresightValue = 2;// + (12/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft()));
+//        System.out.println("Depth: "+foresightValue);
+//        System.out.println("calculation: "+(12.0/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft())));
+        Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
+//        ArrayList<int[]> validMoves = new ArrayList<>();
+        int bestScore = 0;
+        int[] bestMove = null;
+        boolean setMove = false;
+
+        // Collect all valid moves and evaluate them
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (pieceBoard[i][j] == null || pieceBoard[i][j].isWhite() != isWhite) continue;
+                boolean[][] tempMoves = findSelections(sessionId, i, j);
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+                        if (tempMoves[x][y]) {
+                            int[] move = new int[]{i, j, x, y};
+//                            validMoves.add(move);
+
+                            // Evaluate the move
+
+                            int score = evaluateMove(pieceBoard, move, foresightValue, Integer.MIN_VALUE, Integer.MAX_VALUE, sessionVars.getMovesMade());
+//                            System.out.println("evaluating move "+i+","+j+" to "+x+","+y+"  score: "+score);
+//                            System.out.println("white king in check on test board "+kingInCheck(pieceBoard, true));
+//                            System.out.println("black king in check on test board "+kingInCheck(pieceBoard, false));
+//                            System.out.println(score);
+//                            int score = evaluateMove(pieceBoard, move, 2);
+//                             System.out.println(Arrays.toString(move) + ": " + score);
+                            if(!setMove){
+                                bestMove = move;
+                                bestScore = score;
+                                setMove = true;
+                            }
+                            if(isWhite) {
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    bestMove = move;
+                                }
+                            }
+                            else {
+                                if (score < bestScore) {
+                                    bestScore = score;
+                                    bestMove = move;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("Best score: "+bestScore);
+        System.out.println("Best move: "+Arrays.toString(bestMove));
+        System.out.println();
+        // Make the best move
+        if (bestMove != null) {
+            Piece removedPiece = sessionVars.getBoardObject().getPieceAt(bestMove[2], bestMove[3]);
+            if(removedPiece != null) {
+                sessionVars.removePiece(removedPiece.toString(), removedPiece.isWhite());
+            }
+            sessionVars.getBoardObject().movePiece(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
+            sessionVars.getBoardObject().setPiece(bestMove[0], bestMove[1], null);
+        }
+    }
+
+//    public void makeRandomMove(boolean isWhite, String sessionId){
+//        SessionVariables sessionVars = getSessionVariables(sessionId);
+//        Piece[][] boardArray = sessionVars.getBoardObject().getBoardArray();
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if (boardArray[i][j] == null || boardArray[i][j].isWhite() != isWhite) continue;
+//                boolean[][] tempMoves = findSelections(sessionId, i, j);
+//                for(int x=0; x<8; x++){
+//                    for(int y=0; y<8; y++){
+//                        Piece removedPiece = sessionVars.getBoardObject().getPieceAt(x, y);
+//                        if(removedPiece != null) {
+//                            sessionVars.removePiece(removedPiece.toString(), removedPiece.isWhite());
+//                        }
+//                        sessionVars.getBoardObject().movePiece(i, j, x, y);
+//                        sessionVars.getBoardObject().setPiece(i, j, null);
+//                    }
+//               }
+//            }
+//        }
+//    }
+
+    public void makeComputerMove2(boolean isWhite, String sessionId){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
+        int foresightValue = 2 + (12/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft()));
+        System.out.println("Depth: "+foresightValue);
+        System.out.println("calculation: "+(12.0/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft())));
         Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
         ArrayList<int[]> validMoves = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
@@ -286,7 +560,8 @@ public class Processor {
                             validMoves.add(move);
 
                             // Evaluate the move
-                            int score = evaluateMove(pieceBoard, move, 2);
+                            int score = evaluateMove(pieceBoard, move, foresightValue, Integer.MIN_VALUE, Integer.MAX_VALUE, sessionVars.getMovesMade());
+//                            int score = evaluateMove(pieceBoard, move, 2);
                             // System.out.println(Arrays.toString(move) + ": " + score);
                             if (score > bestScore) {
                                 bestScore = score;
@@ -299,41 +574,31 @@ public class Processor {
         }
         // Make the best move
         if (bestMove != null) {
+            Piece removedPiece = sessionVars.getBoardObject().getPieceAt(bestMove[2], bestMove[3]);
+            if(removedPiece != null) {
+                sessionVars.removePiece(removedPiece.toString(), removedPiece.isWhite());
+            }
             sessionVars.getBoardObject().movePiece(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
             sessionVars.getBoardObject().setPiece(bestMove[0], bestMove[1], null);
         }
     }
 
-    public int evaluateMove(Piece[][] evaluationBoard, int[] move, int foresight) {
-//        SessionVariables sessionVars = getSessionVariables(sessionId);
-//        Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
-        Piece[][] pieceBoard = evaluationBoard;
-        int score = 0;
-    
-        // If the move captures an opponent's piece, add the value of the piece to the score
-        Piece capturedPiece = pieceBoard[move[2]][move[3]];
-        if (capturedPiece != null) {
-            score += 20 * capturedPiece.getValue();
-        }
-        // encourage moving pawns
-        score += 1 * (pieceBoard[move[0]][move[1]].toString().equals("Pawn") ? 1 : 0);
-        // discourage moving the king
-        score -= 1 * (pieceBoard[move[0]][move[1]].toString().equals("King") ? 1 : 0);
-
-        score -= addSquareScore(move[0], move[1]); // discourage moving away from favourable positions
-        score += addSquareScore(move[2], move[3]); // encourage moving towards favourable positions
-    
+    public int evaluateMove(Piece[][] evaluationBoard, int[] move, int foresight, int alpha, int beta, int movesMade) {
         // make a copy of board
-        Piece[][] tempBoard = copyPieceBoard(pieceBoard);
+        Piece[][] tempBoard = copyPieceBoard(evaluationBoard);
+//        Piece[][] tempBoard = copyPieceBoard(pieceBoard);
         // make the move on the copy
-        tempBoard[move[0]][move[1]] = null;
-        tempBoard[move[2]][move[3]] = pieceBoard[move[0]][move[1]];
+//        tempBoard[move[0]][move[1]] = null;
+//        tempBoard[move[2]][move[3]] = evaluationBoard[move[0]][move[1]];
+        movePieceCopy(move[0], move[1], move[2], move[3], tempBoard);
+        setPieceCopy(move[0], move[1], null, tempBoard);
+        movesMade++;
         // find opposing king color
-        boolean kingColor = !tempBoard[move[2]][move[3]].isWhite();
+//        boolean kingColor = !tempBoard[move[2]][move[3]].isWhite();
         // check if opposing king is in check
-        if(isInCheck(kingColor, tempBoard)){
-            score += 40;
-        }
+//        if(isInCheck(kingColor, tempBoard)){
+//            score += 40;
+//        }
 //        if(isCheckMate(sessionId, kingColor)){
 //            if(isInCheck(kingColor, pieceBoard)){
 //                score += Integer.MAX_VALUE;
@@ -343,55 +608,82 @@ public class Processor {
 //            }
 //        }
 
+        boolean checkMate = isCheckMate(tempBoard);
+        if(tempBoard[move[2]][move[3]].isWhite()) {
+            if (isInCheck(false, tempBoard)) {
+//            System.out.println("black king in check");
+                if(checkMate){
+                    System.out.println("white immediate checkmate");
+                    return Integer.MAX_VALUE;
+                }
+            }
+        }
+        else{
+            if(isInCheck(true, tempBoard)){
+//            System.out.println("white king in check")
+                if(checkMate){
+                    System.out.println("black immediate checkmate");
+                    return Integer.MIN_VALUE;
+                }
+            }
+        }
         // add foresight into the next move, avoiding ones where you will lose score
         if(foresight > 0){
+            // run a loop and run evaluate move on every
 //            System.out.println("Moving from "+move[0]+","+move[1]+" to "+move[2]+","+move[3]);
-            score -= foresightScore(tempBoard, foresight, !tempBoard[move[2]][move[3]].isWhite());
+            return foresightScore(tempBoard, foresight, !tempBoard[move[2]][move[3]].isWhite(), alpha, beta, movesMade);
         }
 
-        return score;
+        return evaluatePosition(tempBoard, movesMade, tempBoard[move[2]][move[3]].isWhite());
     }
 
-    public int foresightScore(Piece[][] pieceBoard, int foresight, boolean turn){
-        int score = Integer.MIN_VALUE;
-        int[] bestMove = null;
-        // Simulate making the computer move
-//        Piece capturedPiece = pieceBoard[move[2]][move[3]];
-//        Piece movedPiece = pieceBoard[move[0]][move[1]];
-//        pieceBoard[move[0]][move[1]] = null;
-//        pieceBoard[move[2]][move[3]] = movedPiece;
-
-        // Find the highest score possible for the opponent's next move
-        for(int i=0; i<8; i++){ // loop through opponent pieces they could choose
+    public int foresightScore(Piece[][] pieceBoard, int foresight, boolean turn, int alpha, int beta, int movesMade){
+//        System.out.println("side is "+turn);
+        int score = 0;
+//        int[] bestMove = null;
+        boolean setMove = false;
+        // Find the highest score possible for the next move
+        for(int i=0; i<8; i++){ // loop through pieces they could choose
             for(int j=0; j<8; j++){
                 if(pieceBoard[i][j] != null && (pieceBoard[i][j].isWhite() == turn)){
                     boolean[][] tempMoves = findSelectionsFromBoard(i, j, pieceBoard);
-//                    System.out.println("White moves "+i+","+j);
-//                    System.out.println(Arrays.deepToString(tempMoves).replace("], ", "]\n").replace("[[", "[").replace("]]", "]"));
                     for(int x=0; x<8; x++){ // loop through the moves of the piece at i,j
                         for(int y=0; y<8; y++){
                             if(tempMoves[x][y]){ // if a valid move
                                 int[] nextMove = new int[]{i, j, x, y};
-                                int nextScore = evaluateMove(pieceBoard, nextMove, foresight-1);
-                                if(nextScore > score){
+                                int nextScore = evaluateMove(pieceBoard, nextMove, foresight-1, alpha, beta, movesMade);
+                                if(!setMove){
+//                                    bestMove = nextMove;
                                     score = nextScore;
-                                    bestMove = nextMove;
+                                    setMove = true;
+                                }
+                                if(turn) {
+                                    if (nextScore > score) {
+                                        score = nextScore;
+//                                        bestMove = nextMove;
+                                    }
+                                    if(score > alpha) alpha = score;
+                                    if(beta <= alpha){
+                                        return score;
+                                    }
+                                }
+                                else {
+                                    if (nextScore < score) {
+                                        score = nextScore;
+//                                        bestMove = nextMove;
+                                    }
+                                    if(score < beta) beta = score;
+                                    if(beta <= alpha){
+                                        return score;
+                                    }
                                 }
                             }
                         }
                     }
-//                    System.out.println("White score is "+score);
                 }
-//                System.out.println("EVALUATE MOVE RESULT: "+evaluateMove(pieceBoard, new int[]{7,5,2,0}, 0));
             }
         }
-
-//        // Undo the move
-//        pieceBoard[move[0]][move[1]] = movedPiece;
-//        pieceBoard[move[2]][move[3]] = capturedPiece;
-
-        // System.out.println("Best move is "+(bestMove == null ? "null" : (Arrays.toString(bestMove) + ": " + score)));
-//        System.out.println("best move is "+bestMove[0]+","+bestMove[1]+" to "+bestMove[2]+","+bestMove[3]);
+//        System.out.println("best move for white is "+bestMove[0]+","+bestMove[1]+" to "+bestMove[2]+","+bestMove[3]);
         return score;
     }
 

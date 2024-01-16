@@ -17,6 +17,24 @@ public abstract class Piece implements PieceTemplate{
     }
 
     @Override
+    public Piece copy(){
+        switch (toString()){
+            case "Pawn":
+                return new Pawn(isWhite(), getRow(), getCol());
+            case "Rook":
+                return new Rook(isWhite(), getRow(), getCol());
+            case "Knight":
+                return new Knight(isWhite(), getRow(), getCol());
+            case "Bishop":
+                return new Bishop(isWhite(), getRow(), getCol());
+            case "Queen":
+                return new Queen(isWhite(), getRow(), getCol());
+            case "King":
+                return new King(isWhite(), getRow(), getCol());
+        }
+        return null;
+    }
+    @Override
     public void setWhite(boolean isWhite) {
         this.isWhite = isWhite;
     }

@@ -37,7 +37,11 @@ public class Board {
     public Piece[][] getBoardArray() {
         Piece[][] finalBoard = new Piece[8][8];
         for(int i=0; i<8; i++){
-            System.arraycopy(chessBoard[i], 0, finalBoard[i], 0, 8);
+            for(int j=0; j<8; j++){
+                if(chessBoard[i][j] != null)
+                    finalBoard[i][j] = chessBoard[i][j].copy();
+            }
+//            System.arraycopy(chessBoard[i], 0, finalBoard[i], 0, 8);
         }
         return finalBoard;
     }

@@ -58,6 +58,7 @@ public class WebSocketController {
         if(message.equals("1")){
             SessionVariables sessionVars = processor.getSessionVariables(clientId);
             processor.makeComputerMove(sessionVars.isWhiteTurn(), clientId);
+            sessionVars.addMovesMade();
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
             return "5"+sessionVars.getBoardObject().decodeBoardIntoImg();
         }

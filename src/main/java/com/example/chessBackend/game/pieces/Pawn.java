@@ -16,13 +16,13 @@ public class Pawn extends Piece{
             if(checkTrue(row-1,col,currentBoard)) possibleMoves[row-1][col] = true;
             if(col > 0 && checkTrueTake(row-1,col-1,currentBoard)) possibleMoves[row-1][col-1] = true;
             if(col < 7 && checkTrueTake(row-1,col+1,currentBoard)) possibleMoves[row-1][col+1] = true;
-            if(row == 6 && checkTrue(row-2,col,currentBoard)) possibleMoves[row-2][col] = true;
+            if(row == 6 && checkTrue(row-2,col,currentBoard) && checkTrue(row-1, col, currentBoard)) possibleMoves[row-2][col] = true;
         }
         else if(row < 7 && !isWhite()){
             if(checkTrue(row+1,col,currentBoard)) possibleMoves[row+1][col] = true;
             if(col > 0 && checkTrueTake(row+1,col-1,currentBoard)) possibleMoves[row+1][col-1] = true;
             if(col < 7 && checkTrueTake(row+1,col+1,currentBoard)) possibleMoves[row+1][col+1] = true;
-            if(row == 1 && checkTrue(row+2,col,currentBoard)) possibleMoves[row+2][col] = true;
+            if(row == 1 && checkTrue(row+2,col,currentBoard) && checkTrue(row+1, col, currentBoard)) possibleMoves[row+2][col] = true;
         }
 
         possibleMoves[row][col] = false;
