@@ -23,14 +23,22 @@ public class Board {
                 if(i>1 && i<6) break;
                 boolean isWhite = true;
                 if(i<=1) isWhite = false;
-                if(i == 1 || i == 6) chessBoard[i][j] = new Pawn(isWhite, i, j);
-                else if(j == 0 || j == 7) chessBoard[i][j] = new Rook(isWhite, i, j);
-                else if(j == 1 || j == 6) chessBoard[i][j] = new Knight(isWhite, i, j);
-                else if(j == 2 || j == 5) chessBoard[i][j] = new Bishop(isWhite, i, j);
-                else if(j == 3) chessBoard[i][j] = new Queen(isWhite, i, j);
+//                if(isWhite) {
+//
+//                }
+//                else{
+                if (i == 1 || i == 6) chessBoard[i][j] = new Pawn(isWhite, i, j);
+                else if (j == 0 || j == 7) chessBoard[i][j] = new Rook(isWhite, i, j);
+                else if (j == 1 || j == 6) chessBoard[i][j] = new Knight(isWhite, i, j);
+                else if (j == 2 || j == 5) chessBoard[i][j] = new Bishop(isWhite, i, j);
+                else if (j == 3) chessBoard[i][j] = new Queen(isWhite, i, j);
                 else chessBoard[i][j] = new King(isWhite, i, j);
+//                }
             }
         }
+//        chessBoard[7][4] = new King(true, 7, 4);
+//        chessBoard[5][0] = new Queen(false, 5, 0);
+//        chessBoard[6][1] = new Queen(false, 6, 1);
 
     }
 

@@ -15,7 +15,7 @@ public class Processor {
 
     public SessionVariables getSessionVariables(String sessionId){
         if(!sessionVariablesMap.containsKey(sessionId)){
-            System.out.println("Session ID not found, adding new session ID: "+sessionId);
+//            System.out.println("Session ID not found, adding new session ID: "+sessionId);
             addSessionId(sessionId);
         }
         return sessionVariablesMap.get(sessionId);
@@ -28,6 +28,24 @@ public class Processor {
     }
 
     public String firstClick(String sessionId, int row, int col){
+//        Piece[][] testBoard = copyPieceBoard(getSessionVariables(sessionId).getBoardObject().getBoardArray());
+//        testBoard[7][0] = testBoard[5][0];
+//        testBoard[5][0] = null;
+//        testBoard[7][0].setRow(7);
+//        testBoard[7][0].setCol(0);
+//        System.out.println("Test board checkmate "+isCheckMate(testBoard, true));
+//        System.out.println(pieceHasMoves(testBoard, 7, 4));
+//        for(int i=0; i<8; i++){
+//            for(int j=0; j<8; j++){
+//                if(testBoard[i][j] != null){
+//                    System.out.print(testBoard[i][j].toString().charAt(0));
+//                }
+//                else{
+//                    System.out.print("_");
+//                }
+//            }
+//            System.out.println();
+//        }
 //        Piece[][] testBoard = new Piece[8][8];
 //        testBoard[0][0] = new Rook(false, 0, 0);
 //        testBoard[0][7] = new Rook(false, 0, 7);
@@ -122,8 +140,8 @@ public class Processor {
 
             sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
 
-            if(isCheckMate(sessionVars.getBoardObject().getBoardArray())){
-                if(!isInCheck(sessionVars.isWhiteTurn(), sessionVars.getBoardObject().getBoardArray())){ // checkmate case
+            if(isCheckMate(sessionVars.getBoardObject().getBoardArray(), sessionVars.isWhiteTurn())){
+                if(isInCheck(sessionVars.isWhiteTurn(), sessionVars.getBoardObject().getBoardArray())){ // checkmate case
                     return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
                 }
                 return "4"+sessionVars.getBoardObject().decodeBoardIntoImg(); // stalemate case
@@ -142,6 +160,21 @@ public class Processor {
         return output;
     }
 
+    public String computerTurn(String sessionId){
+        SessionVariables sessionVars = getSessionVariables(sessionId);
+        makeComputerMove(sessionVars.isWhiteTurn(), sessionId, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        sessionVars.addMovesMade();
+        sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
+        if(isCheckMate(sessionVars.getBoardObject().getBoardArray(), sessionVars.isWhiteTurn())){
+            if(isInCheck(sessionVars.isWhiteTurn(), sessionVars.getBoardObject().getBoardArray())){ // checkmate case
+                return "3"+sessionVars.getBoardObject().decodeBoardIntoImg();
+            }
+            return "4"+sessionVars.getBoardObject().decodeBoardIntoImg(); // stalemate case
+        }
+        return "5"+sessionVars.getBoardObject().decodeBoardIntoImg();
+    }
+
+
     public String processClick(String sessionId, int row, int col){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         String output = "";
@@ -154,10 +187,14 @@ public class Processor {
         return output;
     }
 
-    public boolean isCheckMate(Piece[][] pieceBoard){
+    public boolean isCheckMate(Piece[][] pieceBoard, boolean kingSide){
         for(int i=0; i<8; i++){
             for(int j=0; j<8; j++){
-                if(pieceHasMoves(pieceBoard, i, j)) return false;
+                if(pieceBoard[i][j] != null && pieceBoard[i][j].isWhite() == kingSide && pieceHasMoves(pieceBoard, i, j)){
+//                    System.out.println("Piece at "+i+","+j+" has moves");
+//                    System.out.println(pieceBoard[i][j].isWhite()+" "+pieceBoard[i][j].toString());
+                    return false;
+                }
             }
         }
         return true;
@@ -395,31 +432,42 @@ public class Processor {
 //        }
 //        System.out.println("white king in check on test board "+isInCheck(true, pieceBoard));
 //        System.out.println("black king in check on test board "+isInCheck(false, pieceBoard));
-        boolean checkMate = isCheckMate(pieceBoard);
+//        boolean whiteCheckMate = isCheckMate(pieceBoard, true);
+//        if(checkMate) System.out.println("Checkmate/stalemate opportunity");
         if(turn) {
+            boolean blackCheckMate = isCheckMate(pieceBoard, false);
             if (isInCheck(false, pieceBoard)) {
 //            System.out.println("black king in check");
-                if(checkMate){
-                    System.out.println("Sees checkmate white");
-                    return Integer.MAX_VALUE;
+                if(blackCheckMate){
+//                    System.out.println("Sees checkmate on black");
+//                    System.out.println("returning early");
+                    return Integer.MAX_VALUE - 10000;
                 }
                 score += 14;
             }
             else{
-                if(checkMate) score -= 10; // stalemate
+                if(blackCheckMate){
+//                    System.out.println("Sees stalemate");
+                    score -= 10; // stalemate
+                }
             }
         }
         else{
+            boolean whiteCheckMate = isCheckMate(pieceBoard, true);
             if(isInCheck(true, pieceBoard)){
 //            System.out.println("white king in check");
-                if(checkMate){
-                    System.out.println("Sees checkmate black");
-                    return Integer.MIN_VALUE;
+                if(whiteCheckMate){
+//                    System.out.println("Sees checkmate on white");
+//                    System.out.println("returning early");
+                    return Integer.MIN_VALUE + 10000;
                 }
                 score -= 14;
             }
             else{
-                if(checkMate) score += 10; // stalemate
+                if(whiteCheckMate){
+//                    System.out.println("Sees stalemate");
+                    score += 10; // stalemate
+                }
             }
         }
 //        }
@@ -450,7 +498,7 @@ public class Processor {
         return true;
     }
 
-    public void makeComputerMove(boolean isWhite, String sessionId){
+    public void makeComputerMove(boolean isWhite, String sessionId, int alpha, int beta){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         int foresightValue = 2;// + (12/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft()));
 //        System.out.println("Depth: "+foresightValue);
@@ -462,6 +510,7 @@ public class Processor {
         boolean setMove = false;
 
         // Collect all valid moves and evaluate them
+        outerloop:
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (pieceBoard[i][j] == null || pieceBoard[i][j].isWhite() != isWhite) continue;
@@ -474,7 +523,7 @@ public class Processor {
 
                             // Evaluate the move
 
-                            int score = evaluateMove(pieceBoard, move, foresightValue, Integer.MIN_VALUE, Integer.MAX_VALUE, sessionVars.getMovesMade());
+                            int score = evaluateMove(pieceBoard, move, foresightValue, alpha, beta, sessionVars.getMovesMade());
 //                            System.out.println("evaluating move "+i+","+j+" to "+x+","+y+"  score: "+score);
 //                            System.out.println("white king in check on test board "+kingInCheck(pieceBoard, true));
 //                            System.out.println("black king in check on test board "+kingInCheck(pieceBoard, false));
@@ -491,21 +540,51 @@ public class Processor {
                                     bestScore = score;
                                     bestMove = move;
                                 }
+                                if(score > alpha) alpha = score;
+                                if(beta <= alpha){
+                                    bestMove = move;
+                                    break outerloop;
+                                }
                             }
                             else {
                                 if (score < bestScore) {
                                     bestScore = score;
                                     bestMove = move;
                                 }
+                                if(score < beta) beta = score;
+                                if(beta <= alpha){
+                                    bestMove = move;
+                                    break outerloop;
+                                }
                             }
+//                            if(turn) {
+//                                if (nextScore > score) {
+//                                    score = nextScore;
+////                                        bestMove = nextMove;
+//                                }
+//                                if(score > alpha) alpha = score;
+//                                if(beta <= alpha){
+//                                    return score;
+//                                }
+//                            }
+//                            else {
+//                                if (nextScore < score) {
+//                                    score = nextScore;
+////                                        bestMove = nextMove;
+//                                }
+//                                if(score < beta) beta = score;
+//                                if(beta <= alpha){
+//                                    return score;
+//                                }
+//                            }
                         }
                     }
                 }
             }
         }
-        System.out.println("Best score: "+bestScore);
-        System.out.println("Best move: "+Arrays.toString(bestMove));
-        System.out.println();
+//        System.out.println("Best score: "+bestScore);
+//        System.out.println("Best move: "+Arrays.toString(bestMove));
+//        System.out.println();
         // Make the best move
         if (bestMove != null) {
             Piece removedPiece = sessionVars.getBoardObject().getPieceAt(bestMove[2], bestMove[3]);
@@ -541,8 +620,8 @@ public class Processor {
     public void makeComputerMove2(boolean isWhite, String sessionId){
         SessionVariables sessionVars = getSessionVariables(sessionId);
         int foresightValue = 2 + (12/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft()));
-        System.out.println("Depth: "+foresightValue);
-        System.out.println("calculation: "+(12.0/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft())));
+//        System.out.println("Depth: "+foresightValue);
+//        System.out.println("calculation: "+(12.0/(sessionVars.blackPiecesLeft()+sessionVars.whitePiecesLeft())));
         Piece[][] pieceBoard = sessionVars.getBoardObject().getBoardArray();
         ArrayList<int[]> validMoves = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
@@ -607,23 +686,36 @@ public class Processor {
 //                score -= 50;
 //            }
 //        }
-
-        boolean checkMate = isCheckMate(tempBoard);
-        if(tempBoard[move[2]][move[3]].isWhite()) {
+//        if(foresight == 2) {
+//            for (int i = 0; i < 8; i++) {
+//                for (int j = 0; j < 8; j++) {
+//                    if (tempBoard[i][j] != null) {
+//                        System.out.print(tempBoard[i][j].toString().charAt(0));
+//                    } else {
+//                        System.out.print("_");
+//                    }
+//                }
+//                System.out.println();
+//            }
+//        }
+//        if(foresight == 2) {
+//            if (checkMate) System.out.println("CHECKMATE FOUND !!!!!!!!!!!!!!!!!!!");
+//        }
+        if(tempBoard[move[2]][move[3]].isWhite()) { // white turn
+            boolean blackInCheckmate = isCheckMate(tempBoard, false);
             if (isInCheck(false, tempBoard)) {
-//            System.out.println("black king in check");
-                if(checkMate){
-                    System.out.println("white immediate checkmate");
-                    return Integer.MAX_VALUE;
+                if(blackInCheckmate){
+//                    System.out.println("returning early");
+                    return Integer.MAX_VALUE - 1000 + (10 * foresight);
                 }
             }
         }
         else{
+            boolean whiteInCheckmate = isCheckMate(tempBoard, true);
             if(isInCheck(true, tempBoard)){
-//            System.out.println("white king in check")
-                if(checkMate){
-                    System.out.println("black immediate checkmate");
-                    return Integer.MIN_VALUE;
+                if(whiteInCheckmate){
+//                    System.out.println("returning early");
+                    return Integer.MIN_VALUE + 1000 - (10 * foresight);
                 }
             }
         }

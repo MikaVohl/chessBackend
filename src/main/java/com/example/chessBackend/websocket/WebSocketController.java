@@ -56,11 +56,8 @@ public class WebSocketController {
             clientId = (String) headers.get("id").get(0);
         String message = clientMessage.getPayload();
         if(message.equals("1")){
-            SessionVariables sessionVars = processor.getSessionVariables(clientId);
-            processor.makeComputerMove(sessionVars.isWhiteTurn(), clientId);
-            sessionVars.addMovesMade();
-            sessionVars.setWhiteTurn(!sessionVars.isWhiteTurn());
-            return "5"+sessionVars.getBoardObject().decodeBoardIntoImg();
+            return processor.computerTurn(clientId);
+
         }
 
         int row = message.charAt(0)-48;
