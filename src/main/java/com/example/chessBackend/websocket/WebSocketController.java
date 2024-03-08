@@ -1,9 +1,7 @@
 package com.example.chessBackend.websocket;
 
 import com.example.chessBackend.game.Processor;
-import com.example.chessBackend.game.SessionVariables;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -32,20 +30,6 @@ public class WebSocketController {
         return sessionId+processor.getSessionVariables(sessionId).getBoardObject().decodeBoardIntoImg();
     }
 
-
-    // NEW - /connection endpoint not necessary
-    // @MessageMapping("/connection")  // This is the endpoint where clients send their messages
-    // public void connectionNegotation(Message<String> clientMessage) {
-        // MessageHeaders msgHeaders = clientMessage.getHeaders();
-        // LinkedMultiValueMap<?,?> headers = (LinkedMultiValueMap<?,?>) msgHeaders.get("nativeHeaders");
-        // String clientId = null;
-        // if(headers != null)
-        //     clientId = (String) headers.get("id").get(0);
-        // String message = clientMessage.getPayload(); // NEW - Not necessary, don't need to send this message from frontend
-    // }
-
-        // @SendToUser("/topic/serverCommands")   // This is the topic to which the processed messages will be sent
-
     @MessageMapping("/incomingInfo") // This is the endpoint where clients send their messages
     @SendToUser("/topic/serverCommands")
     public String handleMessage(Message<String> clientMessage) {
@@ -62,13 +46,6 @@ public class WebSocketController {
 
         int row = message.charAt(0)-48;
         int col = message.charAt(1)-48;
-
-        // System.out.println("id..."+clientId+"...");
-        // try{
-        //     messagingTemplate.convertAndSendToUser(clientId, "/topic/serverCommands", processor.processClick(clientId, row, col));
-        // }catch(Exception e){
-        //     System.out.println("Error: "+e);
-        // }
 
         return processor.processClick(clientId, row, col);
     }
